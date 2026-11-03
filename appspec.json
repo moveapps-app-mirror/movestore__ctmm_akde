@@ -7,9 +7,6 @@
         "name": "shiny"
       },
       {
-        "name": "shinyWidgets"
-      },
-      {
         "name": "shinycssloaders"
       },
       {
@@ -26,12 +23,6 @@
       },
       {
         "name": "sf"
-      },
-      {
-        "name": "glue"
-      },
-      {
-        "name": "mapview"
       },
       {
         "name": "leaflet"

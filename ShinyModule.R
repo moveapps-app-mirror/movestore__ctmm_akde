@@ -1,11 +1,8 @@
 library(shiny)
-library(shinyWidgets)
 library(ctmm)
 library(sf)
-library(glue)
 library(dplyr)
 library(purrr)
-library(mapview)
 library(leaflet)
 library(zip)
 library(shinycssloaders)
@@ -60,7 +57,7 @@ shinyModule <- function(input, output, session, data){ ## The parameter "data" i
     # export as geopackage
     akde_sf |>
       bind_rows() |>
-      sf::st_write(appArtifactPath(glue::glue("homerange.gpkg")), append = FALSE)
+      sf::st_write(appArtifactPath("homerange.gpkg"), append = FALSE)
 
     akde_sf
   })
@@ -158,7 +155,7 @@ shinyModule <- function(input, output, session, data){ ## The parameter "data" i
     xx |> as_tibble() |> 
       mutate(id = names(hr), unit = rownames(xx), level = input$isopleth_levels) |> 
       select(id, level, unit, low, est, high) |> 
-      write.csv(appArtifactPath(glue::glue("akde_summary.csv")), row.names = FALSE)
+      write.csv(appArtifactPath("akde_summary.csv"), row.names = FALSE)
   })
   
   # Artefact: tifs
