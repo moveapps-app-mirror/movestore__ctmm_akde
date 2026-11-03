@@ -157,7 +157,8 @@ shinyModule <- function(input, output, session, data){ ## The parameter "data" i
   })
   
   # Artefact: tifs
-  dir.create(targetDirUDs <- tempdir())
+  targetDirUDs <- tempfile("uds")
+  dir.create(targetDirUDs)
   
   r <- lapply(names(hr), function(x) 
     writeRaster(hr[[x]], file.path(targetDirUDs, paste0(x, ".tif")), overwrite = TRUE))
