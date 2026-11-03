@@ -46,30 +46,35 @@ shinyModule <- function(input, output, session, data){ ## The parameter "data" i
     map(st_bbox)
   bbx <- do.call(rbind, bbx)
   
+  # Home-range contours at the chosen isopleth level: a list with one sf
+  # object per animal, in the same order and with the same names as hr
   hr.iso <- reactive({
     req(input$isopleth_levels)
-    akde_sf <- map(hr, ~ sf::st_as_sf(ctmm::SpatialPolygonsDataFrame.UD(.x, level.UD = input$isopleth_levels))) |> bind_rows()
-    
+    akde_sf <- map(
+      hr,
+      ~ sf::st_as_sf(
+        ctmm::SpatialPolygonsDataFrame.UD(.x, level.UD = input$isopleth_levels)
+      )
+    )
+
     # export as geopackage
-    akde_sf |> 
+    akde_sf |>
+      bind_rows() |>
       sf::st_write(appArtifactPath(glue::glue("homerange.gpkg")), append = FALSE)
-    
+
     akde_sf
   })
-  
-  
+
+  # The same contours for the map. Each contour's name ends in "low", "est"
+  # or "high" (e.g. "Cilla 95% est") so that contours can be selected interactively
   hr.leaflet <- reactive({
-    akde_sf <- hr.iso() |> 
-      mutate(ID = sub("[0-9]{1,2}%.*$", "", name),
-             what = purrr::map_chr(stringr::str_split(name, " "), ~ tail(.x,1))) %>% 
-      mutate(what = as.factor(what)) 
-    akde_sf$what <- factor(akde_sf$what, levels = c("low", "est", "high"))
-    akde_sf <- akde_sf %>%  
-      arrange(desc(what)) %>% 
-      st_transform(4326) |> 
-      group_split(ID)
-    names(akde_sf) <- names(hr)
-    akde_sf
+    map(
+      hr.iso(),
+      function(akde_sf) {
+        akde_sf$what <- sub(".* ", "", akde_sf$name)
+        st_transform(akde_sf, 4326)
+      }
+    )
   })
   
   output$map <- renderLeaflet({
