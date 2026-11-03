@@ -25,7 +25,7 @@ shinyModuleUserInterface <- function(id, label) {
              ),
       ), 
       column(4, 
-             selectizeInput(ns("what"), "What do you want to see?", c("Lower CI" = "low", "Estimate" = "est", "Upper CI" = "high"), multiple = TRUE, selected = "est")
+             checkboxGroupInput(ns("what"), "What do you want to see?", c("Lower CI" = "low", "Estimate" = "est", "Upper CI" = "high"), selected = "est")
       ),
       column(4, 
              sliderInput(ns("opacity"), "Opacity", min = 0, max = 1, value = 0.5), 
