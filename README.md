@@ -91,9 +91,9 @@ dashed white lines. Defaults to "Estimate".
 **Opacity**: The opacity of the filled home range estimates on the map, from 0
 (transparent) to 1 (opaque). Defaults to 0.5.
 
-**Remove all animals from map**: Hides the home ranges of all animals. Show
-individual animals again with the layer menu in the top-right corner of the
-map.
+**Add all animals to map** / **Remove all animals from map**: Shows or hides
+the home ranges of all animals. Individual animals can be shown or hidden with
+the layer menu in the top-right corner of the map.
 
 **Store settings**: Click to store the current settings of the App for future
 Workflow runs.
