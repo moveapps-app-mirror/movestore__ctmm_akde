@@ -1,0 +1,9 @@
+ShinyModule.R
+README.md
+renv/
+renv.lock
+*.Rproj
+appspec.json
+data/auxiliary/
+tests/testthat/test_ShinyModule.R
+data/raw/
