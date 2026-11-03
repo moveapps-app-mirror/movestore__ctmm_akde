@@ -101,7 +101,8 @@ shinyModule <- function(input, output, session, data){ ## The parameter "data" i
       if ("est" %in% input$what) {
         m <- m |> addPolygons(data = hr.leaflet()[[i]] |> 
                                 filter(what == "est"), 
-                              group = names(hr.leaflet())[i], 
+                              group = names(hr.leaflet())[i],
+                              label = ~name,
                               color = cols[i],
                               fillColor = cols[i],
                               fillOpacity = input$opacity)
@@ -109,8 +110,9 @@ shinyModule <- function(input, output, session, data){ ## The parameter "data" i
       
       if ("low" %in% input$what) {
         m <- m |> addPolygons(data = hr.leaflet()[[i]] |> 
-                                filter(what == "low"), 
-                              group = names(hr.leaflet())[i], 
+                                filter(what == "low"),
+                              group = names(hr.leaflet())[i],
+                              label = ~name,
                               dashArray = "3", weight = 1,
                               opacity = 1,
                               color = "white",
@@ -120,8 +122,9 @@ shinyModule <- function(input, output, session, data){ ## The parameter "data" i
       
       if ("high" %in% input$what) {
         m <- m |> addPolygons(data = hr.leaflet()[[i]] |> 
-                                filter(what == "high"), 
-                              group = names(hr.leaflet())[i], 
+                                filter(what == "high"),
+                              group = names(hr.leaflet())[i],
+                              label = ~name,
                               dashArray = "3", weight = 1,
                               color = "white",
                               opacity = 1,
