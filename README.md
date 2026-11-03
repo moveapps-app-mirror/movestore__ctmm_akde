@@ -51,9 +51,11 @@ the *Variogram* App to evaluate whether this property holds for your data.
 ### Output type
 `ctmm UD with Data and Model`: a list with three elements:
 
-1. The list of `ctmm` models from the input.
-2. A list containing the aKDE UD (an object of class `UD`) for each animal.
-3. The tracking data from the input (an object of type `telemetry.list`).
+1. `model`: the list of `ctmm` models from the input.
+2. `uds`: a list containing the aKDE UD (an object of class `UD`) for each
+   animal.
+3. `data`: the tracking data from the input (an object of type
+   `telemetry.list`).
 
 ### Artefacts
 The artefacts reflect the **Isopleth level** selected in the App.

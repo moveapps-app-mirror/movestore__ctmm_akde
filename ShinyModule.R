@@ -185,7 +185,9 @@ shinyModule <- function(input, output, session, data){ ## The parameter "data" i
     mode = "cherry-pick"
   )
   
-  return(reactive({ 
-    list(data[[1]], hr, data[[2]])
-  })) ## if data are not modified, the unmodified input data must be returned
+  # List elements need names for cargo agent analyzer. Note that some apps
+  # may consume this output with positional matching though.
+  return(reactive({
+    list(model = data[[1]], uds = hr, data = data[[2]])
+  }))
 }
