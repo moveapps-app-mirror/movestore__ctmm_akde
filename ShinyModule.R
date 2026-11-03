@@ -47,6 +47,7 @@ shinyModule <- function(input, output, session, data){ ## The parameter "data" i
   bbx <- do.call(rbind, bbx)
   
   hr.iso <- reactive({
+    req(input$isopleth_levels)
     akde_sf <- map(hr, ~ sf::st_as_sf(ctmm::SpatialPolygonsDataFrame.UD(.x, level.UD = input$isopleth_levels))) |> bind_rows()
     
     # export as geopackage
@@ -88,7 +89,10 @@ shinyModule <- function(input, output, session, data){ ## The parameter "data" i
   cols <- rainbow(length(hr))
   
   observe({
-    m <- leafletProxy("map") |> 
+    # Wait for the opacity slider before drawing. Don't wait for input$what
+    # as the user may deselect all options and the map still needs to update
+    req(input$opacity)
+    m <- leafletProxy("map") |>
       clearShapes() |> 
       clearControls()
     for (i in 1:length(hr.leaflet())) {
@@ -143,6 +147,7 @@ shinyModule <- function(input, output, session, data){ ## The parameter "data" i
   
   # Artefact: summary
   observe({
+    req(input$isopleth_levels)
     xx <- map(hr, ~ summary(.x, level.UD = input$isopleth_levels)$CI)
     xx <- do.call(rbind, xx)
     xx |> as_tibble() |> 
