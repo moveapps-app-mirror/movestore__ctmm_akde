@@ -1,11 +1,8 @@
 library(shiny)
-library(shinyWidgets)
 library(ctmm)
 library(sf)
-library(glue)
 library(dplyr)
 library(purrr)
-library(mapview)
 library(leaflet)
 library(zip)
 library(shinycssloaders)
@@ -25,11 +22,15 @@ shinyModuleUserInterface <- function(id, label) {
              ),
       ), 
       column(4, 
-             selectizeInput(ns("what"), "What do you want to see?", c("Lower CI" = "low", "Estimate" = "est", "Upper CI" = "high"), multiple = TRUE, selected = "est")
+             checkboxGroupInput(ns("what"), "What do you want to see?", c("Lower CI" = "low", "Estimate" = "est", "Upper CI" = "high"), selected = "est")
       ),
       column(4, 
-             sliderInput(ns("opacity"), "Opacity", min = 0, max = 1, value = 0.5), 
-             actionButton(ns("clear"), label = "Remove all animals from map")
+             sliderInput(ns("opacity"), "Opacity", min = 0, max = 1, value = 0.5),
+             div(
+               style = "display: flex; flex-wrap: wrap; gap: 6px;",
+               actionButton(ns("add_all"), label = "Add all animals to map", class = "btn-sm"),
+               actionButton(ns("clear"), label = "Remove all animals from map", class = "btn-sm")
+             )
       ) 
     ),
     hr(),
@@ -46,29 +47,35 @@ shinyModule <- function(input, output, session, data){ ## The parameter "data" i
     map(st_bbox)
   bbx <- do.call(rbind, bbx)
   
+  # Home-range contours at the chosen isopleth level: a list with one sf
+  # object per animal, in the same order and with the same names as hr
   hr.iso <- reactive({
-    akde_sf <- map(hr, ~ sf::st_as_sf(ctmm::SpatialPolygonsDataFrame.UD(.x, level.UD = input$isopleth_levels))) |> bind_rows()
-    
+    req(input$isopleth_levels)
+    akde_sf <- map(
+      hr,
+      ~ sf::st_as_sf(
+        ctmm::SpatialPolygonsDataFrame.UD(.x, level.UD = input$isopleth_levels)
+      )
+    )
+
     # export as geopackage
-    akde_sf |> 
-      sf::st_write(appArtifactPath(glue::glue("homerange.gpkg")), append = FALSE)
-    
+    akde_sf |>
+      bind_rows() |>
+      sf::st_write(appArtifactPath("homerange.gpkg"), append = FALSE)
+
     akde_sf
   })
-  
-  
+
+  # The same contours for the map. Each contour's name ends in "low", "est"
+  # or "high" (e.g. "Cilla 95% est") so that contours can be selected interactively
   hr.leaflet <- reactive({
-    akde_sf <- hr.iso() |> 
-      mutate(ID = sub("[0-9]{1,2}%.*$", "", name),
-             what = purrr::map_chr(stringr::str_split(name, " "), ~ tail(.x,1))) %>% 
-      mutate(what = as.factor(what)) 
-    akde_sf$what <- factor(akde_sf$what, levels = c("low", "est", "high"))
-    akde_sf <- akde_sf %>%  
-      arrange(desc(what)) %>% 
-      st_transform(4326) |> 
-      group_split(ID)
-    names(akde_sf) <- names(hr)
-    akde_sf
+    map(
+      hr.iso(),
+      function(akde_sf) {
+        akde_sf$what <- sub(".* ", "", akde_sf$name)
+        st_transform(akde_sf, 4326)
+      }
+    )
   })
   
   output$map <- renderLeaflet({
@@ -76,10 +83,8 @@ shinyModule <- function(input, output, session, data){ ## The parameter "data" i
     
     leaflet() |> 
       addTiles(group = "OSM") |> 
-      addTiles('http://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', 
-               options = providerTileOptions(noWrap = TRUE), group="World Imagery") |> 
-      addProviderTiles(providers$Stamen.Toner, group = "Toner") |> 
-      addProviderTiles(providers$Stamen.TonerLite, group = "Toner Lite") |> 
+      addProviderTiles(providers$Esri.WorldImagery,
+                       options = providerTileOptions(noWrap = TRUE), group = "World Imagery") |>
       fitBounds(min(bbx[, 1]), min(bbx[, 2]), max(bbx[, 3]), max(bbx[, 4])) |> 
       addHomeButton(
         ext = c(min(bbx[, 1]), min(bbx[, 2]), max(bbx[, 3]), max(bbx[, 4])), 
@@ -90,14 +95,18 @@ shinyModule <- function(input, output, session, data){ ## The parameter "data" i
   cols <- rainbow(length(hr))
   
   observe({
-    m <- leafletProxy("map") |> 
+    # Wait for the opacity slider before drawing. Don't wait for input$what
+    # as the user may deselect all options and the map still needs to update
+    req(input$opacity)
+    m <- leafletProxy("map") |>
       clearShapes() |> 
       clearControls()
     for (i in 1:length(hr.leaflet())) {
       if ("est" %in% input$what) {
         m <- m |> addPolygons(data = hr.leaflet()[[i]] |> 
                                 filter(what == "est"), 
-                              group = names(hr.leaflet())[i], 
+                              group = names(hr.leaflet())[i],
+                              label = ~name,
                               color = cols[i],
                               fillColor = cols[i],
                               fillOpacity = input$opacity)
@@ -105,8 +114,9 @@ shinyModule <- function(input, output, session, data){ ## The parameter "data" i
       
       if ("low" %in% input$what) {
         m <- m |> addPolygons(data = hr.leaflet()[[i]] |> 
-                                filter(what == "low"), 
-                              group = names(hr.leaflet())[i], 
+                                filter(what == "low"),
+                              group = names(hr.leaflet())[i],
+                              label = ~name,
                               dashArray = "3", weight = 1,
                               opacity = 1,
                               color = "white",
@@ -116,8 +126,9 @@ shinyModule <- function(input, output, session, data){ ## The parameter "data" i
       
       if ("high" %in% input$what) {
         m <- m |> addPolygons(data = hr.leaflet()[[i]] |> 
-                                filter(what == "high"), 
-                              group = names(hr.leaflet())[i], 
+                                filter(what == "high"),
+                              group = names(hr.leaflet())[i],
+                              label = ~name,
                               dashArray = "3", weight = 1,
                               color = "white",
                               opacity = 1,
@@ -127,7 +138,7 @@ shinyModule <- function(input, output, session, data){ ## The parameter "data" i
     }
     m |> 
       addLayersControl(
-        baseGroups = c("OSM", "Wolrd Imagery", "Toner", "Toner Lite"),
+        baseGroups = c("OSM", "World Imagery"),
         overlayGroups = names(hr.leaflet()),
         options = layersControlOptions(collapsed = TRUE)
       ) |> 
@@ -137,24 +148,33 @@ shinyModule <- function(input, output, session, data){ ## The parameter "data" i
         labels  = names(hr)) 
     
   })
+  # The two buttons are left out of saved settings. Otherwise restoring them
+  # would count as a click and hide or show the animals when the App opens.
+  setBookmarkExclude(c("add_all", "clear"))
+  observeEvent(input$add_all, {
+    leafletProxy("map") |>
+      showGroup(names(hr.leaflet()))
+  })
   observeEvent(input$clear, {
-    leafletProxy("map") |> 
+    leafletProxy("map") |>
       hideGroup(names(hr.leaflet()))
   })
   
   
   # Artefact: summary
   observe({
+    req(input$isopleth_levels)
     xx <- map(hr, ~ summary(.x, level.UD = input$isopleth_levels)$CI)
     xx <- do.call(rbind, xx)
     xx |> as_tibble() |> 
       mutate(id = names(hr), unit = rownames(xx), level = input$isopleth_levels) |> 
       select(id, level, unit, low, est, high) |> 
-      write.csv(appArtifactPath(glue::glue("akde_summary.csv")))
+      write.csv(appArtifactPath("akde_summary.csv"), row.names = FALSE)
   })
   
   # Artefact: tifs
-  dir.create(targetDirUDs <- tempdir())
+  targetDirUDs <- tempfile("uds")
+  dir.create(targetDirUDs)
   
   r <- lapply(names(hr), function(x) 
     writeRaster(hr[[x]], file.path(targetDirUDs, paste0(x, ".tif")), overwrite = TRUE))
@@ -165,7 +185,9 @@ shinyModule <- function(input, output, session, data){ ## The parameter "data" i
     mode = "cherry-pick"
   )
   
-  return(reactive({ 
-    list(data[[1]], hr, data[[2]])
-  })) ## if data are not modified, the unmodified input data must be returned
+  # List elements need names for cargo agent analyzer. Note that some apps
+  # may consume this output with positional matching though.
+  return(reactive({
+    list(model = data[[1]], uds = hr, data = data[[2]])
+  }))
 }
