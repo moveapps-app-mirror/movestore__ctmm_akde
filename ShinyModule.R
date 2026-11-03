@@ -158,7 +158,7 @@ shinyModule <- function(input, output, session, data){ ## The parameter "data" i
     xx |> as_tibble() |> 
       mutate(id = names(hr), unit = rownames(xx), level = input$isopleth_levels) |> 
       select(id, level, unit, low, est, high) |> 
-      write.csv(appArtifactPath(glue::glue("akde_summary.csv")))
+      write.csv(appArtifactPath(glue::glue("akde_summary.csv")), row.names = FALSE)
   })
   
   # Artefact: tifs
